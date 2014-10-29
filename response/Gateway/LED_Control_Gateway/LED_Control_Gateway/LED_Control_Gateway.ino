@@ -63,9 +63,12 @@ void setup()
   radio.Initialize(NODEID, RF12_433MHZ, NETWORKID);
   radio.Encrypt((uint8_t*)KEY);
   Serial.begin(SERIAL_BAUD);
-  mySerial.begin(9600);
+  mySerial.begin(SERIAL_BAUD);
   Serial.println("System ready");
+  
+  mySerial.println("System ready");
  // displayMenu();
+ 
 }
 
 void loop()
@@ -137,8 +140,15 @@ void sendMessage()
   radio.Send(nodeId, sendBuf, 3, REQUESTACK);
   Serial.print("Request sent ");
   Serial.print(nodeId);
-  Serial.println(waitForAck() ? " (ACK OK)" : "(no ACK reply)");
-  mySerial.write(waitForAck() ? '1' : '0');
+
+ if(waitForAck()){
+   Serial.println(" ACK-ok ");mySerial.println(" ACK-ok ");
+ }
+ else{
+   Serial.println(" no-ACK ");mySerial.println(" no-ACK ");
+ }
+   
+
   Blink(LED, 5);
 }
 

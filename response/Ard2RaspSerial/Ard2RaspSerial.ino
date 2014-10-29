@@ -46,6 +46,7 @@ void loop() {
 
   // print the results to the serial monitor:
   mySerial.print("sensor = " );                       
+  //Serial.print("sensor = " );   
   mySerial.print(sensorValue);      
   mySerial.print("\t output = ");      
   mySerial.println(outputValue);   
