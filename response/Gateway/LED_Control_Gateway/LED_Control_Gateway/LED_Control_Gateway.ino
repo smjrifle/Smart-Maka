@@ -34,9 +34,9 @@ SoftwareSerial mySerial(5, 6); // RX, TX
 
 uint8_t input;
 RFM12B radio;
-char PINmode = 'D';      //mode : 'b' = blinking, 'p' = pulsing, 'o' = 'off'
-char PINdirection = "W";
-char PINstate = '0';
+char mode = 'D';      //mode : 'b' = blinking, 'p' = pulsing, 'o' = 'off'
+//char pinDirection = "W";
+char pinState = '0';
 
 byte nodeId = 2;      //node to send message to
 
@@ -52,8 +52,7 @@ void displayMenu(boolean includeHeader=true)
   Serial.println("******************************************************************");
   Serial.println("* [2 (default) to 9]                   - change target node ID   *");
   Serial.println("* [A=Analog , D=Digital]               - Pin Mode                *");
-  Serial.println("* [W=Write, R=Read ]                   - Pin Direction           *");
-  Serial.println("* [Z=O/F/P]   -  Sending On/Off in Digital/W, PWM value in Analog/W*");
+  Serial.println("* [W=Write, R=Read ] -                 - Pin Direction           *");
   Serial.println("* [ENTER]                              - send request to target  *");
   Serial.println("******************************************************************\n");
 }
@@ -64,37 +63,32 @@ void setup()
   radio.Initialize(NODEID, RF12_433MHZ, NETWORKID);
   radio.Encrypt((uint8_t*)KEY);
   Serial.begin(SERIAL_BAUD);
-  mySerial.begin(SERIAL_BAUD);
-  displayMenu();
+  mySerial.begin(9600);
+  Serial.println("System ready");
+ // displayMenu();
 }
 
-static handleInput(char response){
-   input = mySerial.read();
+void loop()
+{
+  //check for serial input (from 2-9, to correspond to node IDs [2,9])
+  if (mySerial.available() > 0) {
+    input = mySerial.read();
     Serial.write(input);
     
-    if( input == 'D' || input == 'A'){ //Digital or Analog Pin Mode (Analog mode not implemented yet)
-      PINmode = input;
-     Serial.print("Switched Pin Mode to [" );
-      Serial.print(input == 'A' ? "Analog" : input == 'D' ? "Digital");
-      Serial.println("]");
-    }
-    
-    if ((input == 'W' || input == 'R')  ) // If the Pin Direction is Digital, then you can read and write
+    if (input == 'W' || input == 'w') 
     {
-       PINdirection = input;
-     Serial.print("Switched Pin Direction to [" );
-      Serial.print(input == 'W' ? "Write" : input == 'R' ? "Read");
-      Serial.println("]");
+      Serial.print("Pin Mode : Write ");
+      mode = 'w';
+    }
+    else if (input == 'r'||input == 'R' ){
+       Serial.print("Pin Mode : Read");
+      mode = 'r';
     }
     
-     if((input == 'O' || input == 'F') && (PINdirection == 'W') && (PINmode == 'D')){
-        PINdirection = input;
-     Serial.print("Switched Pin Direction to [" );
-      Serial.print(input == 'W' ? "Write" : input == 'R' ? "Read");
-      Serial.println("]");
-    }
- 
-    if (input >= '2' && input <= '9') //[2 to 9]
+    else if(input == '1' || input == '0')
+     pinState = input;
+     
+    else if (input >= '2' && input <= '9') //[2 to 9]
     {
       nodeId = input-48;
       Serial.print("Switched to node [" );
@@ -105,16 +99,10 @@ static handleInput(char response){
       sendMessage();
     else
     {
-      Serial.println("Invalid input, try again: \n"+ "[ "+input +" ]");
+      Serial.println("Invalid input, try again: \n"+input);
       //displayMenu(false);
     }
   }
-}
-void loop()
-{
-  //check for serial input (from 2-9, to correspond to node IDs [2,9])
-  if (mySerial.available() > 0) {
-   
   
   //pass any received RF message to serial
   if (radio.ReceiveComplete())
@@ -130,11 +118,14 @@ void loop()
       {
         radio.SendACK();
         Serial.print(" - ACK sent");
+        mySerial.print('1');
       }
       delay(5);
       digitalWrite(LED,0);
     }
-    else Serial.print("BAD-CRC");
+    else 
+    Serial.print('CRC fail');
+
     
     Serial.println();
   }
@@ -142,11 +133,12 @@ void loop()
 
 void sendMessage()
 {
-  sprintf(sendBuf, "%c:%c:%c:%c", PINmode, PINdirection, );
+  sprintf(sendBuf, "%c:%c", mode, pinState);
   radio.Send(nodeId, sendBuf, 3, REQUESTACK);
   Serial.print("Request sent ");
   Serial.print(nodeId);
   Serial.println(waitForAck() ? " (ACK OK)" : "(no ACK reply)");
+  mySerial.write(waitForAck() ? '1' : '0');
   Blink(LED, 5);
 }
 
